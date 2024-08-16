@@ -6,7 +6,7 @@ from logic.TextChat import Chat
 
 class Voice(commands.Cog):
 
-    @commands.slash_command(name="join", help="Подключает бота к голосовому каналу")
+    @commands.slash_command(name="join", description="Подключает бота к голосовому каналу")
     async def join(self, ctx):
         voice = ctx.author.voice
 

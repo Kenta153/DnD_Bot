@@ -1,3 +1,6 @@
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
+
 from utils import discord_patch
 discord_patch.patch()
 
@@ -8,7 +11,6 @@ from logic.MusicBot import bot2
 import asyncio
 
 intents = discord.Intents.all()
-
 bot = commands.Bot(intents=intents) 
 
 @bot.event
