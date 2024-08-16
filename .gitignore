@@ -1,1 +1,6 @@
 .venv
+model.pth
+speakers_xtts.pth
+config.json
+vocab.json
+__pycache__/

@@ -1,13 +1,16 @@
 from discord.ext import commands
 import discord
-from logic import custom_wave_sink
-from logic.callback import finished_callback
-from music_bot import play
+from logic.SpeechGeneration import Speech
+import io
 
 class Menu(commands.Cog):
 
+    def __init__(self):
+        self.voice_file_uploading = False
+
     @commands.Cog.listener()
-    async def on_guild_join(self, guild):
+    async def on_member_join(self, member):
+        guild = member.guild
         # Найти основной текстовый канал сервера
         if guild.system_channel is not None:
             channel = guild.system_channel
@@ -16,40 +19,43 @@ class Menu(commands.Cog):
             channel = next((channel for channel in guild.text_channels if channel.permissions_for(guild.me).send_messages), None)
 
         if channel is not None:
-            await channel.send(f"""Привет, {guild.name}! Спасибо за добавление меня на ваш сервер! \n
-                               Вот список доступных команд: \n""")
+            await channel.send(
+                f"Привет, **{member.name}**! Я - **Dnd Game Bot**, искусственный интеллект, предназначенный для игры в Подземелья и Драконы! \nВот список доступных команд: \n\
+                **/create_thread** - *Создаёт отдельную ветку с ботом и пользователем*\n\
+                **/join**          - *Подключает бота к голосовому каналу*\n\n\
+                Также, если Вы хотите **поменять** голос рассказчика, то Вы можете **прислать** аудиофайл с желаемым голосом, размером в 10-20 секунд."
+            )
             
-    @commands.slash_command()
-    async def create_thread(self, ctx):
-        user = ctx.author
-        thread = await ctx.channel.create_thread(name=f"Профиль", type=discord.ChannelType.private_thread, invitable=False)
-        await thread.add_user(user)
-        await thread.send(f"Привет, {user.name}! Это ваша личная переписка.")
+    # @commands.slash_command()
+    # async def create_thread(self, ctx):
+    #     user = ctx.author
+    #     thread = await ctx.channel.create_thread(name=f"Профиль", type=discord.ChannelType.private_thread, invitable=False)
+    #     await thread.add_user(user)
+    #     await thread.send(f"Привет, {user.name}! Это ваша личная переписка.")
+
 
     @commands.slash_command()
-    async def join(self, ctx):
-        voice = ctx.author.voice
+    async def custom_voice(self, ctx):
+        self.voice_file_uploading = True
+        await ctx.respond("Загрузи аудио-файл с желаемым голосом диктора. Рекомендуемая продолжительность - 10-15 секунд.")
 
-        if not voice:
-            return await ctx.respond("You're not in a vc right now")
-        
-        await play(voice.channel.id, "exploring")
+    @commands.Cog.listener()
+    async def on_message(self, message: discord.Message):
+        if self.voice_file_uploading and not message.author.bot:
+            print(message.attachments, message.attachments[0].content_type)
+            if len(message.attachments)==1 and "audio" in message.attachments[0].content_type:
 
-        print("lll")
+                voice = io.BytesIO()
 
-        vc = await voice.channel.connect()
+                await message.attachments[0].save(voice, use_cached=True)
 
-        print("lll")
-
-        vc.start_recording(
-            custom_wave_sink.WaveSink(),
-            finished_callback,
-            ctx.channel,
-        )
-
-        print("lll")
-
-        await ctx.respond("The recording has started!")
+                Speech.new_voice([voice])
+                self.voice_file_uploading = False
+                
+                await message.channel.send("Голос сохранен успешно!")
+            else:
+                await message.channel.send("Произошла ошибка. Попробуй еще раз. Прикрепи один аудио-файл с желаемым голосом диктора.")
 
 def setup(bot):
+    print("Menu loaded!")
     bot.add_cog(Menu())

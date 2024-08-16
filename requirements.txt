@@ -1,0 +1,5 @@
+discord
+pycord
+openai
+faster_whisper
+TTS
