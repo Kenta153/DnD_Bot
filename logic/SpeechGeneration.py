@@ -7,6 +7,7 @@ from utils.voice import load_model, load_latents, float2pcm
 import asyncio
 from discord.opus import Encoder as OpusEncoder
 import json
+from config import LATENTS_PATH
 
 class SpeechSource(AudioSource):
 
@@ -39,10 +40,10 @@ class SpeechSource(AudioSource):
         
 
 class Speech:
-    voice_model = load_model(os.path.join(os.getcwd(), "checkpoint"))
-    gpt_cond_latent, speaker_embedding = load_latents(os.path.join(os.getcwd(), "checkpoint\\latents.json"))
+    voice_model = load_model()
+    gpt_cond_latent, speaker_embedding = load_latents(os.path.join(os.getcwd(), LATENTS_PATH))
     source = SpeechSource()
-    inference_stream = None
+    inference_stream = threading.Thread()
     inference_flag = 0
 
     @classmethod
@@ -54,7 +55,7 @@ class Speech:
             "speaker_embedding": cls.speaker_embedding.cpu().squeeze().half().tolist(),
         }
 
-        with open(os.path.join(os.getcwd(), "checkpoint\\latents.json"), "w") as new_file:
+        with open(os.path.join(os.getcwd(), LATENTS_PATH), "w") as new_file:
             json.dump(latents, new_file)
 
     @classmethod
@@ -64,8 +65,7 @@ class Speech:
                 sentence, "ru", cls.gpt_cond_latent, cls.speaker_embedding
             )
             for chunk in chunks:
-                if cls.inference_flag == 1:
-                    print("Killing inference!")
+                if cls.inference_flag:
                     cls.inference_flag = 0
                     return
                 cls.source.write(np.repeat(float2pcm(chunk), 4))
@@ -73,11 +73,10 @@ class Speech:
     @classmethod
     async def process(cls, text):
 
-        #killing inference
+        #killing processes
         await cls.kill()
 
-        #reseting stream
-        cls.source.killed = True
+        #reseting source
         cls.source = SpeechSource()
 
         #creating inference stream
@@ -90,11 +89,14 @@ class Speech:
     @classmethod
     async def kill(cls):
 
+        #killing source
+        cls.source.killed = True
+
+        #shit code
         while cls.inference_flag:
             await asyncio.sleep(0.1)
-
-        if cls.inference_stream:
-            cls.inference_flag = 1
-            while cls.inference_flag and cls.inference_stream.is_alive():
-                await asyncio.sleep(0.1)
-            cls.inference_flag = 0
+            
+        cls.inference_flag = 1
+        while cls.inference_stream.is_alive():
+            await asyncio.sleep(0.1)
+        cls.inference_flag = 0

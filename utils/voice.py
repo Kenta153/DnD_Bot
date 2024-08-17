@@ -1,11 +1,14 @@
 from TTS.tts.configs.xtts_config import XttsConfig
 from TTS.tts.models.xtts import Xtts
+from TTS.api import TTS
 import os
 import json
 import torch
 import numpy as np
 
-def load_model(path):
+def load_model():
+    path = TTS().download_model_by_name("tts_models/multilingual/multi-dataset/xtts_v2")[4]
+
     config = XttsConfig()
     config.load_json(os.path.join(path, "config.json"))
 

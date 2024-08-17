@@ -23,9 +23,12 @@ class Voice(commands.Cog):
 
         await ctx.respond("*Наше приключение начинается...*")
 
-    async def finished_callback(sink, user_id, audio, channel):
+    async def finished_callback(self, sink, user_id, audio, channel):
 
         transcribation = Recognition.transcribe(audio.file)
+
+        if not transcribation:
+            return
 
         Chat.message(transcribation)
 
