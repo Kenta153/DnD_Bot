@@ -2,8 +2,10 @@ import discord
 from discord.ext import commands
 import yt_dlp as youtube_dl
 import asyncio
+from pytube import Playlist
+import random
 
-bot2 = commands.Bot()
+music_bot = commands.Bot()
 
 ffmpeg_options = {'options': '-vn'}
 
@@ -37,6 +39,7 @@ sources = {
 }
 
 ytdl = youtube_dl.YoutubeDL(ytdl_format_options)
+music_key = None
 
 class YTDLSource(discord.PCMVolumeTransformer):
     def __init__(self, source: discord.AudioSource, *, data: dict, volume: float = 0.5):
@@ -48,37 +51,36 @@ class YTDLSource(discord.PCMVolumeTransformer):
         self.url = data.get("url")
 
     @classmethod
-    async def from_url(cls, url, *, loop=None, stream=False):
-        loop = loop or asyncio.get_event_loop()
-        data = await loop.run_in_executor(
-            None, lambda: ytdl.extract_info(url, download=not stream)
-        )
+    def from_url(cls, url, *, stream=False):
+        playlist = Playlist(url)
+        song_info = ytdl.extract_info(random.choice(playlist), download=not stream)
 
-        if "entries" in data:
-            # Takes the first item from a playlist
-            data = data["entries"][0]
-
-        filename = data["url"] if stream else ytdl.prepare_filename(data)
-        print(data["url"])
-        return cls(discord.FFmpegPCMAudio(filename, **ffmpeg_options), data=data)
-
-async def play(channel_id, key):
-    url = sources[key]
-
-    if not bot2.voice_clients:
+        return cls(discord.FFmpegPCMAudio(song_info["url"], **ffmpeg_options, executable="ffmpeg\\ffmpeg.exe"), data=song_info)
+    
+async def join(channel_id):
+    if not music_bot.voice_clients:
         try:
-            voice_channel = bot2.get_channel(channel_id)
+            voice_channel = music_bot.get_channel(channel_id)
             await voice_channel.connect()
         except:
             print('Уже подключен или не удалось подключиться')
-            raise Exception("Hz error")
 
-    voice_client = bot2.voice_clients[0]
-    voice_client.stop()
 
-    source = await YTDLSource.from_url("https://youtu.be/oKxVhvAhQ9U?si=HxrpDaHLxkat5TFq", loop = bot2.loop, stream=True) 
-    print('source')
-    await voice_client.play(
-        source, after=lambda e: print(f"Player error: {e}") if e else None
-    )
-    print("play")
+def play(key):
+
+    url = sources[key]
+
+    voice_client: discord.VoiceClient = music_bot.voice_clients[0]
+
+    if voice_client._player:
+        voice_client._player.after = None
+        voice_client.stop()
+
+    source = YTDLSource.from_url(url, stream=True) 
+    voice_client.play(source, after=lambda e: play(key))
+
+def kill():
+    voice_client: discord.VoiceClient = music_bot.voice_clients[0]
+    if voice_client._player:
+        voice_client._player.after = None
+        voice_client.stop()

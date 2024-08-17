@@ -61,6 +61,7 @@ class Speech:
     @classmethod
     def inference(cls, text):
         for sentence in text:
+            print("Sayed:", sentence)
             chunks = cls.voice_model.inference_stream(
                 sentence, "ru", cls.gpt_cond_latent, cls.speaker_embedding
             )

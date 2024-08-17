@@ -89,9 +89,15 @@ def unpack_audio(self, data, sink, callback, *args):
 
     data = RawData(data, self)
 
+    while data.ssrc not in self.ws.ssrc_map:
+        time.sleep(0.05)
+
+    if args[1].get_user(self.ws.ssrc_map[data.ssrc]["user_id"]).bot:
+        return
+
     if data.decrypted_data == b"\xf8\xff\xfe":  # Frame of silence
 
-        if data.ssrc not in self.user_timestamps or data.ssrc not in self.ws.ssrc_map:
+        if data.ssrc not in self.user_timestamps:
             return
         
         self.user_timestamps.pop(data.ssrc)

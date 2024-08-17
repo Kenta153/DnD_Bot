@@ -1,6 +1,7 @@
 from discord.ext import commands
 import discord
 from logic.SpeechGeneration import Speech
+from logic.TextChat import Chat
 import io
 
 class Menu(commands.Cog):
@@ -22,13 +23,15 @@ class Menu(commands.Cog):
 
         if channel is not None:
             await channel.send(
-                f"Привет, **{member.nick}**! Я - **Dnd Game Bot**, искусственный интеллект, предназначенный для игры в Подземелья и Драконы!\nВот список доступных команд:\n**/create_thread** - *Создаёт отдельную ветку с ботом и пользователем*\n**/join**                      - *Подключает бота к голосовому каналу*\n\nТакже, если Вы хотите **поменять** голос рассказчика, то Вы можете **прислать** аудиофайл с желаемым голосом, размером в 10-20 секунд."
+                f"Привет, **{member._user.global_name}**! Я - **Dnd Game Bot**, искусственный интеллект, предназначенный для игры в Подземелья и Драконы!\nВот список доступных команд:\n**/create_thread** - *Создаёт отдельную ветку с ботом и пользователем*\n**/start** - *Подключает бота к голосовому каналу*\n**/stop** - *Останавливает игру*\n\nТакже, если Вы хотите **поменять** голос рассказчика, то Вы можете **прислать** аудиофайл с желаемым голосом, размером в 10-20 секунд."
             )
 
     @commands.slash_command(name = "custom_voice", description="Загрузи голос диктора!")
     async def custom_voice(self, ctx):
         self.voice_file_uploading = True
-        await ctx.respond("Загрузи аудио-файл с желаемым голосом диктора. Рекомендуемая продолжительность - 15-20 секунд.")
+        await ctx.respond(
+        "*Пожалуйста :pray:, пришли аудио-файл с желаемым голосом рассказчика.*\n**Рекомендуемая** продолжительность аудио-файла: **15-20** сек."
+        )
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
@@ -47,12 +50,12 @@ class Menu(commands.Cog):
                 Speech.new_voice([voice])
                 self.voice_file_uploading = False
                 
-                await message.channel.send("Голос сохранен успешно!")
+                await message.channel.send("***Голос успешно сохранен! :muscle:***")
             else:
-                await message.channel.send("Произошла ошибка. Попробуй еще раз. Прикрепи один аудио-файл с желаемым голосом диктора.")
+                await message.channel.send("**Внимание**:warning:\n***Произошла ошибка***:exclamation:\n*Проверьте, пожалуйста, прикрепили ли Вы один аудио-файл?*")
         elif self.story_text_uploading:
 
-            print(f"New background: {message.content}")
+            Chat.messages.append({"role": "system", "content": "Вот предыстория, которую ты должен произнести!"})
 
             self.story_text_uploading = False
 
@@ -61,8 +64,8 @@ class Menu(commands.Cog):
     @commands.slash_command(name="custom_story", description="Загрузить свою историю!")
     async def custom_story(self, ctx):
         self.story_text_uploading = True
-        await ctx.respond("""*Пришлите новое развитие вашей истории в текстовом формате*\n*Распишите как можно больше событий и увлекательных приключений!*""")
+        await ctx.respond("***Пришлите новое развитие вашей истории в текстовом формате.***\n*Распишите как можно больше событий и увлекательных приключений!* :dizzy:")
 
 def setup(bot):
-    print("Menu loaded!")
     bot.add_cog(Menu())
+    print("Menu loaded!")
